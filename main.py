@@ -76,7 +76,7 @@ def attempt_get_positive_int(
 
 # Git utils
 def run_command(command: str, cwd=".", env=None) -> str:
-    result = subprocess.run(command, cwd=cwd, capture_output=True, text=True, env=None)
+    result = subprocess.run(command, cwd=cwd, capture_output=True, text=True, env=env)
 
     if result.returncode != 0:
         raise RuntimeError(f"Failed to run `{command}`:\n{result.stderr}")
