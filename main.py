@@ -227,6 +227,7 @@ while on_version <= MAX_VERSION:
 
         env = {
             "GIT_COMMITTER_DATE": created,
+            "GIT_AUTHOR_DATE": created,
         }
 
         run_command(f"git add .", OUTPUT_DIRECTORY, env)
