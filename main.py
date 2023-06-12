@@ -197,7 +197,7 @@ while on_version <= MAX_VERSION:
         allow_redirects=True,
     )
 
-    if response.status_code == 400:
+    if response.status_code == 404:
         print("Got 404, ending download")
         break
     elif response.status_code != 200:
