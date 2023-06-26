@@ -8,7 +8,7 @@ Published versions are marked with a unique tag.
 Simply clone the repo:
 
 ```bash
-git clone https://github.com/ThisStudio/roblox-archive-creator.git
+git clone https://github.com/ThatTimothy/roblox-archive-creator.git
 ```
 
 # Usage
@@ -40,3 +40,7 @@ Make sure the cookie you provide is valid.
 See if you can visit the site it failed to visit.
 Make sure the versions provided exist.
 </details>
+
+# License
+
+See [LICENSE.md](LICENSE.md)
