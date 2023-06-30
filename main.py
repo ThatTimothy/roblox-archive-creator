@@ -215,6 +215,7 @@ version_metadata = {}
 
 cursor = None
 page = 1
+metadata_max_version = -1
 while True:
     print(f"Getting version metadata page {page}...")
     # Note that /saved-versions (undocumented) is a lot like /versions, but also
@@ -239,7 +240,12 @@ while True:
     json_response = response.json()
 
     for metadata in json_response["data"]:
-        version_metadata[metadata["assetVersionNumber"]] = metadata
+        version = metadata["assetVersionNumber"]
+
+        if int(version) > metadata_max_version:
+            metadata_max_version = int(version)
+
+        version_metadata[version] = metadata
 
     cursor = json_response["nextPageCursor"]
 
@@ -248,12 +254,15 @@ while True:
 
     page += 1
 
+print(f"Got version metadata for {metadata_max_version} versions")
+
 # Go through each version, download, and commit it
 
 on_version = MIN_VERSION
 backoff = 5
 while on_version <= MAX_VERSION:
-    print(f"Downloading version {on_version}...")
+    version_progress = f"{on_version}/{min(metadata_max_version, MAX_VERSION)}"
+    print(f"Downloading version {version_progress}...")
 
     params = {
         "id": PLACE_ID,
@@ -281,13 +290,13 @@ while on_version <= MAX_VERSION:
         backoff = backoff + BACKOFF_INCREMENT
         continue
     else:
-        print(f"Saving version {on_version}...")
+        print(f"Saving version {version_progress}...")
         file_path = f"place_{PLACE_ID}.rbxl"
         with open(path.join(OUTPUT_DIRECTORY, file_path), "wb") as file:
             file.write(response.content)
 
         if LUNE_EXPAND_MODE:
-            print(f"Running lune expand on version {on_version}...")
+            print(f"Running lune expand on version {version_progress}...")
             run_command(
                 f'{lune} "{LUNE_EXPAND_PATH}" "{file_path}" {LUNE_EXPAND_MODE}',
                 OUTPUT_DIRECTORY,
@@ -295,12 +304,12 @@ while on_version <= MAX_VERSION:
                 error_on_failure=True,
             )
 
-        print(f"Committing version {on_version}...")
+        print(f"Committing version {version_progress}...")
         metadata = version_metadata[on_version]
 
         if metadata == None:
             raise RuntimeError(
-                f"Unable to get version metadata for version {on_version}, aborting"
+                f"Unable to get version metadata for version {version_progress}, aborting"
             )
 
         created = metadata["created"]
@@ -308,7 +317,7 @@ while on_version <= MAX_VERSION:
 
         if created == None or is_published == None:
             raise RuntimeError(
-                f"Unable to use version metadata for version {on_version}, aborting"
+                f"Unable to use version metadata for version {version_progress}, aborting"
             )
 
         env = {
@@ -325,7 +334,7 @@ while on_version <= MAX_VERSION:
         )
 
         if is_published:
-            print(f"Tagging version {on_version}...")
+            print(f"Tagging version {version_progress}...")
             run_command(
                 f'git tag -a "v{on_version}" -m "Published on {created} by {metadata["creatorType"]} {metadata["creatorTargetId"]}"',
                 OUTPUT_DIRECTORY,
