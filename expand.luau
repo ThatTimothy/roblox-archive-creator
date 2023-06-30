@@ -106,7 +106,10 @@ local function fsExpandTraverse(root: roblox.Instance, path: string)
     if writeScriptTo then
         local castRoot: any = root
         pcall(fs.writeDir, path)
-        fs.writeFile(path .. writeScriptTo, castRoot.Source)
+        local writePath = path .. writeScriptTo
+        writePath = string.gsub(writePath, ">", "_")
+        writePath = string.gsub(writePath, "<", "_")
+        fs.writeFile(writePath, castRoot.Source)
     end
 
     for _, child in root:GetChildren() do
