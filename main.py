@@ -5,6 +5,7 @@ import subprocess
 import sys
 from getpass import getpass
 from os import path
+import time
 from typing import Optional, Tuple
 
 import requests
@@ -13,6 +14,9 @@ import requests
 DEFAULT_OUTPUT_DIRECTORY = "output/"
 COOKIE_CACHE_PATH = "cookie.txt"
 PROMPT_FOR_COOKIE_CACHE = True
+
+BACKOFF_START = 5  # This is the backoff we start at when we get an error
+BACKOFF_INCREMENT = 5  # Every time we get an error, we increment by this amount of backoff before trying again
 
 # Code begins here
 
@@ -179,6 +183,7 @@ while True:
 # Go through each version, download, and commit it
 
 on_version = MIN_VERSION
+backoff = 5
 while on_version <= MAX_VERSION:
     print(f"Downloading version {on_version}...")
 
@@ -201,9 +206,12 @@ while on_version <= MAX_VERSION:
         print("Got 404, ending download")
         break
     elif response.status_code != 200:
-        raise RuntimeError(
-            f"Error {response.status_code} on {response.url} occurred while downloading, aborting:\n{response.text}"
+        print(
+            f"Error {response.status_code} on {response.url} occurred while downloading, backing off:\n{response.text}"
         )
+        time.sleep(backoff)
+        backoff = backoff + BACKOFF_INCREMENT
+        continue
     else:
         print(f"Saving version {on_version}...")
         with open(path.join(OUTPUT_DIRECTORY, f"place_{PLACE_ID}.rbxl"), "wb") as file:
@@ -245,5 +253,6 @@ while on_version <= MAX_VERSION:
             )
 
     on_version += 1
+    backoff = BACKOFF_START
 
 print("Done!")
