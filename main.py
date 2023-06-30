@@ -90,9 +90,10 @@ def run_command(
             command, cwd=cwd, capture_output=True, text=True, env=env
         )
     except Exception as err:
-        raise RuntimeError(f"{prefix}Failed to run `{command}`:\n{err}") from None
+        if error_on_failure:
+            raise RuntimeError(f"{prefix}Failed to run `{command}`:\n{err}") from None
 
-    if result.returncode != 0:
+    if result and result.returncode != 0 and error_on_failure:
         raise RuntimeError(
             f"{prefix}Failed to run `{command}`, exit code {result.returncode}:\n{result.stderr}"
         )
