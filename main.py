@@ -78,6 +78,19 @@ def attempt_get_positive_int(
         print(error_if_invalid)
 
 
+def attempt_get_bool(prompt: str, error_if_invalid: str) -> bool:
+    while True:
+        raw_input: str = input(prompt).strip().lower()
+
+        if raw_input == "yes" or raw_input == "y":
+            return True
+
+        if raw_input == "no" or raw_input == "n":
+            return False
+
+        print(error_if_invalid)
+
+
 # Utils
 def run_command(
     command: str, cwd=".", env=None, error_on_failure=False, error_prefix=None
@@ -107,6 +120,15 @@ run_command(
     error_on_failure=True,
     error_prefix="Failed to validate git exists! Make sure git is installed! ",
 )
+
+# Check IF lune exists
+lune = os.environ["ROBLOX_ARCHIVE_LUNE"]
+
+if not lune or len(lune) == 0:
+    lune = "lune"
+
+lune_check_result = run_command(f"{lune} --version")
+LUNE_EXISTS = lune_check_result and lune_check_result.returncode == 0
 
 # Get the output path
 OUTPUT_DIRECTORY = input(
@@ -139,6 +161,34 @@ MAX_VERSION = attempt_get_positive_int(
     sys.maxsize,
 )
 
+advanced = ""
+LUNE_EXPAND_MODE = None
+LUNE_EXPAND_PATH = path.join(path.dirname(path.abspath(__file__)), "expand.luau")
+
+if LUNE_EXISTS:
+    LUNE_RBXLX = attempt_get_bool(
+        "Also output .rbxlx (y/n): ",
+        'Please response with "y" or "n", try again!',
+    )
+    advanced += f"  Output .rbxlx too: {'yes' if LUNE_RBXLX else 'no'}\n"
+
+    LUNE_FS_EXPAND = attempt_get_bool(
+        "Also output scripts as .luau files (y/n): ",
+        'Please response with "y" or "n", try again!',
+    )
+    advanced += (
+        f"  Output scripts as .luau files: {'yes' if LUNE_FS_EXPAND else 'no'}\n"
+    )
+
+    if LUNE_RBXLX and LUNE_FS_EXPAND:
+        LUNE_EXPAND_MODE = "all"
+    elif LUNE_RBXLX and not LUNE_FS_EXPAND:
+        LUNE_EXPAND_MODE = "rbxlx"
+    elif not LUNE_RBXLX and LUNE_FS_EXPAND:
+        LUNE_EXPAND_MODE = "fs_expand"
+else:
+    advanced = f"  Advanced options disabled because {lune} does not exist, this is optional, see README.md for more info\n"
+
 # Print out all configs
 print(
     f"\nFinal configuration:\n"
@@ -147,6 +197,7 @@ print(
     + f"  Place Id: {PLACE_ID}\n"
     + f"  Minimum version: {MIN_VERSION}\n"
     + f"  Maximum version: {MAX_VERSION if MAX_VERSION != sys.maxsize else 'none'}\n"
+    + advanced
 )
 
 # All configs are defined, start initial setup
@@ -231,8 +282,18 @@ while on_version <= MAX_VERSION:
         continue
     else:
         print(f"Saving version {on_version}...")
-        with open(path.join(OUTPUT_DIRECTORY, f"place_{PLACE_ID}.rbxl"), "wb") as file:
+        file_path = f"place_{PLACE_ID}.rbxl"
+        with open(path.join(OUTPUT_DIRECTORY, file_path), "wb") as file:
             file.write(response.content)
+
+        if LUNE_EXPAND_MODE:
+            print(f"Running lune expand on version {on_version}...")
+            run_command(
+                f'{lune} "{LUNE_EXPAND_PATH}" "{file_path}" {LUNE_EXPAND_MODE}',
+                OUTPUT_DIRECTORY,
+                None,
+                error_on_failure=True,
+            )
 
         print(f"Committing version {on_version}...")
         metadata = version_metadata[on_version]
@@ -264,6 +325,7 @@ while on_version <= MAX_VERSION:
         )
 
         if is_published:
+            print(f"Tagging version {on_version}...")
             run_command(
                 f'git tag -a "v{on_version}" -m "Published on {created} by {metadata["creatorType"]} {metadata["creatorTargetId"]}"',
                 OUTPUT_DIRECTORY,

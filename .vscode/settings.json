@@ -1,0 +1,9 @@
+{
+    "luau-lsp.require.mode": "relativeToFile", // Set the require mode to work with Lune
+    "luau-lsp.completion.autocompleteEnd": true,
+    "luau-lsp.sourcemap.enabled": false,
+    "luau-lsp.require.directoryAliases": {
+        "@lune/": "~/.lune/.typedefs/0.7.2/"
+    },
+    "luau-lsp.types.roblox": false
+}
