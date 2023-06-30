@@ -78,18 +78,34 @@ def attempt_get_positive_int(
         print(error_if_invalid)
 
 
-# Git utils
-def run_command(command: str, cwd=".", env=None) -> str:
-    result = subprocess.run(command, cwd=cwd, capture_output=True, text=True, env=env)
+# Utils
+def run_command(
+    command: str, cwd=".", env=None, error_on_failure=False, error_prefix=None
+) -> subprocess.CompletedProcess[str]:
+    result = None
+    prefix = f"{error_prefix}" if error_prefix else ""
+
+    try:
+        result = subprocess.run(
+            command, cwd=cwd, capture_output=True, text=True, env=env
+        )
+    except Exception as err:
+        raise RuntimeError(f"{prefix}Failed to run `{command}`:\n{err}") from None
 
     if result.returncode != 0:
-        raise RuntimeError(f"Failed to run `{command}`:\n{result.stderr}")
+        raise RuntimeError(
+            f"{prefix}Failed to run `{command}`, exit code {result.returncode}:\n{result.stderr}"
+        )
 
-    return result.stdout
+    return result
 
 
 # Validate git exists
-run_command("git --version")
+run_command(
+    "git --version",
+    error_on_failure=True,
+    error_prefix="Failed to validate git exists! Make sure git is installed! ",
+)
 
 # Get the output path
 OUTPUT_DIRECTORY = input(
@@ -136,7 +152,7 @@ print(
 
 print("Creating directory...")
 os.makedirs(OUTPUT_DIRECTORY)
-run_command("git init", OUTPUT_DIRECTORY)
+run_command("git init", OUTPUT_DIRECTORY, error_on_failure=True)
 
 COOKIES = {
     ".ROBLOSECURITY": ROBLOX_COOKIE,
@@ -238,11 +254,12 @@ while on_version <= MAX_VERSION:
             "GIT_AUTHOR_DATE": created,
         }
 
-        run_command(f"git add .", OUTPUT_DIRECTORY, env)
+        run_command(f"git add .", OUTPUT_DIRECTORY, env, error_on_failure=True)
         run_command(
             f'git commit -m "Version {on_version}"',
             OUTPUT_DIRECTORY,
             env,
+            error_on_failure=True,
         )
 
         if is_published:
@@ -250,6 +267,7 @@ while on_version <= MAX_VERSION:
                 f'git tag -a "v{on_version}" -m "Published on {created} by {metadata["creatorType"]} {metadata["creatorTargetId"]}"',
                 OUTPUT_DIRECTORY,
                 env,
+                error_on_failure=True,
             )
 
     on_version += 1
